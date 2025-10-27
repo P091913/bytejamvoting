@@ -5,6 +5,9 @@ from flask import Flask, render_template, request, redirect, jsonify, url_for, f
 from flask_sqlalchemy import SQLAlchemy
 import random
 import string
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 from sqlalchemy import desc
 from sqlalchemy.sql import func
@@ -23,12 +26,28 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 )
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# --- Admin auth (temporary) ---
+ADMIN_USERNAME = "ihccadminjslj"
+# You can change this to any short-lived pass; hashing keeps it out of memory in plain text
+_ADMIN_PASSWORD_HASH = generate_password_hash("jslj!1238!")
+
+def _verify_admin(username: str, password: str) -> bool:
+    return username == ADMIN_USERNAME and check_password_hash(_ADMIN_PASSWORD_HASH, password)
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            flash("Admin login required.", "warning")
+            return redirect(url_for("admin_login", next=request.path))
+        return view_func(*args, **kwargs)
+    return wrapper
+
 db = SQLAlchemy(app)
 
 # this should be indian hills and local for my testing, but indian hills swaps i believe, so could
 # potentially be dead in water
 allowed_conn = ['167.142.113.82', '127.0.0.1']
-
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -114,7 +133,29 @@ def limit_remote_addr():
         abort(403)  # Forbidden
 
 # admin won't be landing page later
-@app.route('/')
+@app.route("/admin-login", methods=["GET", "POST"])
+def admin_login():
+    # allow login page even if voting window closed
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        if _verify_admin(username, password):
+            session["is_admin"] = True
+            flash("Welcome, admin.", "success")
+            dest = request.args.get("next") or url_for("admin_panel")
+            return redirect(dest)
+        else:
+            flash("Invalid admin credentials.", "danger")
+    return render_template("admin_login.html")
+
+@app.route("/admin-logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    flash("Logged out.", "info")
+    return redirect(url_for("admin_login"))
+
+@app.route('/admin')
+@admin_required
 def admin_panel():
     companies = Company.query.all()
 
@@ -194,6 +235,8 @@ def create():
 
 
 @app.route('/save_voting_settings', methods=['POST'])
+@admin_required
+
 def save_voting_settings():
     voting_start = request.form.get('voting_start')
     voting_end = request.form.get('voting_end')
@@ -299,7 +342,7 @@ def register_user():
         flash("Invalid user type selected!", "danger")
 
 
-@app.route("/dashboard")
+@app.route("/")
 def dashboard():
     settings = VotingSettings.query.order_by(desc(VotingSettings.id)).first()
 
