@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function toggleFields() {
+            var role = document.getElementById("role").value;
+            var studentFields = document.getElementById("student-fields");
+            var companyFields = document.getElementById("company-fields");
+            var userType = document.getElementById("user_type");
+
+            if (role === "guest") {
+                studentFields.classList.remove("hidden");
+                companyFields.classList.add("hidden");
+                setRequired(studentFields, true);
+                setRequired(companyFields, false);
+                userType.value = "2"; // Guest = 2
+            } else if (role === "member") {
+                studentFields.classList.add("hidden");
+                companyFields.classList.remove("hidden");
+                setRequired(studentFields, false);
+                setRequired(companyFields, true);
+                userType.value = "1"; // Member (Student/Coach/Company) = 1
+            } else {
+                studentFields.classList.add("hidden");
+                companyFields.classList.add("hidden");
+                setRequired(studentFields, false);
+                setRequired(companyFields, false);
+                userType.value = ""; // No selection
+            }
+        }
+
+        function setRequired(container, isRequired) {
+            container.querySelectorAll("input").forEach(field => {
+                field.required = isRequired;
+            });
+        }
+    </script>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="bg-white p-6 rounded-lg shadow-md w-96">
+        <h2 class="text-xl font-bold text-center mb-4">Who are you voting as?</h2>
+
+        <form method="POST" action="/register_user">
+            <label class="block text-gray-700 mb-2">I am voting as a:</label>
+            <select id="role" name="role" class="w-full p-2 border rounded mb-4" onchange="toggleFields()" required>
+                <option value="">Select an option</option>
+                <option value="member">Student/Coach/Company</option>
+                <option value="guest">Guest</option>
+            </select>
+
+            <!-- Hidden Field for User Type -->
+            <input type="hidden" id="user_type" name="user_type" value="">
+
+            <!-- Student/Guest Fields -->
+            <div id="student-fields" class="hidden">
+                <input type="hidden" name="type" value="guest">
+                <label class="block text-gray-700">First Name</label>
+                <input type="text" name="first_name" class="w-full p-2 border rounded mb-2" required>
+
+                <label class="block text-gray-700">Last Name</label>
+                <input type="text" name="last_name" class="w-full p-2 border rounded mb-2" required>
+
+                <label class="block text-gray-700">Enter your 4-Digit PIN</label>
+                <input type="text" name="pin" value="{{ fresh_pin }}" maxlength="4" class="w-full p-2 border rounded mb-2" readonly>
+            </div>
+
+            <!-- Coach/Company/Student Fields -->
+            <div id="company-fields" class="hidden">
+                <input type="hidden" name="type" value="member">
+                <label class="block text-gray-700">Pin #</label>
+                <input type="text" name="company_pin" class="w-full p-2 border rounded mb-4" required>
+                <label class="block text-gray-700">First Name</label>
+                <input type="text" name="m_first_name" class="w-full p-2 border rounded mb-4" required>
+                <label class="block text-gray-700">Last Name</label>
+                <input type="text" name="m_last_name" class="w-full p-2 border rounded mb-4" required>
+            </div>
+
+            <!-- Hidden IP Address Field -->
+            <input type="hidden" id="ip-address" name="ip_address">
+
+            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+                Submit
+            </button>
+        </form>
+    </div>
+</body>
+</html>
