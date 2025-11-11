@@ -1,91 +1,138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        function toggleFields() {
-            var role = document.getElementById("role").value;
-            var studentFields = document.getElementById("student-fields");
-            var companyFields = document.getElementById("company-fields");
-            var userType = document.getElementById("user_type");
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up — Voting Portal</title>
 
-            if (role === "guest") {
-                studentFields.classList.remove("hidden");
-                companyFields.classList.add("hidden");
-                setRequired(studentFields, true);
-                setRequired(companyFields, false);
-                userType.value = "2"; // Guest = 2
-            } else if (role === "member") {
-                studentFields.classList.add("hidden");
-                companyFields.classList.remove("hidden");
-                setRequired(studentFields, false);
-                setRequired(companyFields, true);
-                userType.value = "1"; // Member (Student/Coach/Company) = 1
-            } else {
-                studentFields.classList.add("hidden");
-                companyFields.classList.add("hidden");
-                setRequired(studentFields, false);
-                setRequired(companyFields, false);
-                userType.value = ""; // No selection
-            }
-        }
-
-        function setRequired(container, isRequired) {
-            container.querySelectorAll("input").forEach(field => {
-                field.required = isRequired;
-            });
-        }
-    </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --primary: #F6A42D;
+      --dark: #2B2B2B;
+      --text-dark: #1A1A1A;
+    }
+    body { font-family: system-ui, sans-serif; }
+  </style>
 </head>
-<body class="flex items-center justify-center min-h-screen bg-gray-100">
-    <div class="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 class="text-xl font-bold text-center mb-4">Who are you voting as?</h2>
 
-        <form method="POST" action="/register_user">
-            <label class="block text-gray-700 mb-2">I am voting as a:</label>
-            <select id="role" name="role" class="w-full p-2 border rounded mb-4" onchange="toggleFields()" required>
-                <option value="">Select an option</option>
-                <option value="member">Student/Coach/Company</option>
-                <option value="guest">Guest</option>
-            </select>
+<body class="min-h-screen flex flex-col">
 
-            <!-- Hidden Field for User Type -->
-            <input type="hidden" id="user_type" name="user_type" value="">
+  <!-- Top orange hero -->
+  <header class="bg-[var(--primary)] text-[var(--text-dark)] py-16 px-6">
+    <h1 class="text-3xl font-bold max-w-3xl mx-auto leading-tight">
+      Welcome to IHCC Byte Jam
+    </h1>
+  </header>
 
-            <!-- Student/Guest Fields -->
-            <div id="student-fields" class="hidden">
-                <input type="hidden" name="type" value="guest">
-                <label class="block text-gray-700">First Name</label>
-                <input type="text" name="first_name" class="w-full p-2 border rounded mb-2" required>
+  <!-- Form section -->
+  <main class="flex-1 flex items-center justify-center bg-[var(--dark)] text-white px-6 py-12">
+    <div class="bg-[#1f1f1f] w-full max-w-md p-8 rounded-xl shadow-lg">
 
-                <label class="block text-gray-700">Last Name</label>
-                <input type="text" name="last_name" class="w-full p-2 border rounded mb-2" required>
+      <h2 class="text-xl font-bold mb-6">Who are you voting as?</h2>
 
-                <label class="block text-gray-700">Enter your 4-Digit PIN</label>
-                <input type="text" name="pin" value="{{ fresh_pin }}" maxlength="4" class="w-full p-2 border rounded mb-2" readonly>
-            </div>
+      <form method="POST" action="/register_user" id="signupForm">
 
-            <!-- Coach/Company/Student Fields -->
-            <div id="company-fields" class="hidden">
-                <input type="hidden" name="type" value="member">
-                <label class="block text-gray-700">Pin #</label>
-                <input type="text" name="company_pin" class="w-full p-2 border rounded mb-4" required>
-                <label class="block text-gray-700">First Name</label>
-                <input type="text" name="m_first_name" class="w-full p-2 border rounded mb-4" required>
-                <label class="block text-gray-700">Last Name</label>
-                <input type="text" name="m_last_name" class="w-full p-2 border rounded mb-4" required>
-            </div>
+        <!-- role selector -->
+        <label class="block mb-2 text-sm">I am voting as:</label>
+        <select id="role" name="role"
+                class="w-full p-2 rounded bg-[#2c2c2c] border border-gray-600 mb-6 text-white"
+                onchange="toggleFields()" required>
+          <option value="">Select an option</option>
+          <option value="member">Student / Coach / Company</option>
+          <option value="guest">Guest</option>
+        </select>
 
-            <!-- Hidden IP Address Field -->
-            <input type="hidden" id="ip-address" name="ip_address">
+        <!-- hidden user_type -->
+        <input type="hidden" id="user_type" name="user_type">
 
-            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-                Submit
-            </button>
-        </form>
+        <!-- Guest form -->
+        <div id="guest-fields" class="hidden">
+          <label class="block mb-1 text-sm text-white">First Name</label>
+          <input name="first_name" id="guest-first" type="text"
+                 class="w-full p-2 border rounded mb-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                 placeholder="First name">
+
+          <label class="block mt-3 mb-1 text-sm text-white">Last Name</label>
+          <input name="last_name" id="guest-last" type="text"
+                 class="w-full p-2 border rounded mb-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                 placeholder="Last name">
+
+          <label class="block mt-3 mb-1 text-sm text-white">PIN</label>
+          <input name="pin" id="guest-pin" value="{{ fresh_pin }}" readonly maxlength="4"
+                 class="w-full p-2 border rounded mb-2 bg-gray-200 text-black text-center font-semibold"
+                 aria-readonly="true">
+        </div>
+
+        <!-- Member form -->
+        <div id="member-fields" class="hidden">
+          <label class="block mb-1 text-sm text-white">Company PIN</label>
+          <input name="company_pin" id="member-pin" maxlength="4"
+                 class="w-full p-2 border rounded mb-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]">
+
+          <label class="block mt-3 mb-1 text-sm text-white">First Name</label>
+          <input name="m_first_name" id="member-first" type="text"
+                 class="w-full p-2 border rounded mb-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]">
+
+          <label class="block mt-3 mb-1 text-sm text-white">Last Name</label>
+          <input name="m_last_name" id="member-last" type="text"
+                 class="w-full p-2 border rounded mb-2 bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]">
+        </div>
+
+        <!-- IP -->
+        <input type="hidden" name="ip_address" id="ip_address">
+
+        <button class="w-full bg-[var(--primary)] hover:bg-[#e6951f]
+                       text-[var(--text-dark)] font-bold p-3 rounded mt-6 transition">
+          Continue
+        </button>
+      </form>
     </div>
+  </main>
+
+  <script>
+    const guest = document.getElementById("guest-fields");
+    const member = document.getElementById("member-fields");
+    const userType = document.getElementById("user_type");
+
+    function setRequired(container, isRequired) {
+      container.querySelectorAll("input").forEach(field => {
+        // don't set required on readonly PIN
+        if (field.hasAttribute('readonly')) return;
+        field.required = isRequired;
+      });
+    }
+
+    function toggleFields() {
+      const role = document.getElementById("role").value;
+
+      guest.classList.add("hidden");
+      member.classList.add("hidden");
+
+      // clear required flags
+      setRequired(guest, false);
+      setRequired(member, false);
+
+      if (role === "guest") {
+        guest.classList.remove("hidden");
+        setRequired(guest, true);
+        userType.value = "2";
+        // focus first input for UX
+        document.getElementById("guest-first").focus();
+      }
+      if (role === "member") {
+        member.classList.remove("hidden");
+        setRequired(member, true);
+        userType.value = "1";
+        document.getElementById("member-pin").focus();
+      }
+    }
+
+    // Get client IP (best effort, doesn't break if blocked)
+    fetch("https://api.ipify.org?format=json").then(r => r.json()).then(data => {
+      document.getElementById("ip_address").value = data.ip;
+    }).catch(()=>{/* ignore errors */});
+  </script>
+
 </body>
 </html>

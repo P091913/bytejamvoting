@@ -4,30 +4,70 @@
   <meta charset="utf-8">
   <title>Admin Login</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --primary: #F6A42D; /* orange from screenshot */
+      --dark: #2B2B2B;    /* charcoal */
+      --text-dark: #1A1A1A;
+    }
+    body { font-family: system-ui, sans-serif; }
+  </style>
 </head>
-<body class="container">
-  <main>
-    <h1>Admin Login</h1>
+
+<body class="min-h-screen flex items-center justify-center bg-[var(--dark)] text-white p-6">
+
+  <main class="w-full max-w-md bg-[#1f1f1f] rounded-2xl p-8 shadow-xl">
+
+    <!-- Header + brand strip -->
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--text-dark)] font-bold">
+        A
+      </div>
+      <h1 class="text-xl font-semibold">Admin Login</h1>
+    </div>
+
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        {% for category, message in messages %}
-          <div class="contrast {{ category }}">
-            {{ message }}
-          </div>
-        {% endfor %}
+        <div class="space-y-2 mb-4">
+          {% for category, message in messages %}
+            <div class="p-3 rounded text-sm
+              {% if category == 'success' %}bg-green-600 text-white{% endif %}
+              {% if category == 'danger' %}bg-red-600 text-white{% endif %}
+              {% if category == 'warning' %}bg-yellow-500 text-[var(--text-dark)]{% endif %}
+              ">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
       {% endif %}
     {% endwith %}
-    <form method="post" action="{{ url_for('admin_login', next=request.args.get('next')) }}">
-      <label>
+
+    <!-- Login form -->
+    <form method="post" action="{{ url_for('admin_login', next=request.args.get('next')) }}" class="space-y-5">
+
+      <label class="block text-sm">
         Username
-        <input type="text" name="username" required autofocus>
+        <input type="text" name="username" required autofocus
+               class="w-full mt-1 p-2 rounded bg-white/10 border border-white/20 text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[var(--primary)]">
       </label>
-      <label>
+
+      <label class="block text-sm">
         Password
-        <input type="password" name="password" required>
+        <input type="password" name="password" required
+               class="w-full mt-1 p-2 rounded bg-white/10 border border-white/20 text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[var(--primary)]">
       </label>
-      <button type="submit">Sign in</button>
+
+      <button type="submit"
+              class="w-full py-2 rounded-lg bg-[var(--primary)] text-[var(--text-dark)] font-semibold hover:bg-[#e6951f] transition">
+        Sign In
+      </button>
     </form>
   </main>
+
 </body>
 </html>

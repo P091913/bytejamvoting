@@ -1,331 +1,343 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        function toggleMembers(section, id) {
-            const membersDiv = document.getElementById(`${section}-${id}`);
-            membersDiv.classList.toggle("hidden");
-        }
-    </script>
+  <meta charset="utf-8">
+  <title>Admin Panel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{
+      --primary: #F6A42D; /* orange */
+      --dark: #2B2B2B;    /* charcoal */
+      --panel: #1f1f1f;
+      --muted: #bdbdbd;
+    }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+  </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-6">
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
-        <h2 class="text-2xl font-bold text-center mb-4">Admin Panel</h2>
+<body class="min-h-screen bg-[var(--dark)] text-white p-6">
 
-        <!-- Tabs for separating Companies and Teams -->
-    <div class="flex space-x-4 border-b">
-        <button id="companies-tab" class="tab-button active px-4 py-2 text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:outline-none" onclick="showSection('companies')">Companies</button>
-        <button id="teams-tab" class="tab-button px-4 py-2 text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:outline-none" onclick="showSection('teams')">Teams</button>
-        <button id="results-tab" class="tab-button px-4 py-2 text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:outline-none" onclick="showSection('results')">Voting Results</button>
-        <button id="stats-tab" class="tab-button px-4 py-2 text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:outline-none" onclick="showSection('stats')">Stats</button>
-        <button id="settings-tab" class="tab-button px-4 py-2 text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:outline-none" onclick="showSection('settings')">Settings</button>
+  <header class="bg-[var(--primary)] text-[var(--dark)] py-6 mb-6">
+    <div class="max-w-6xl mx-auto px-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">ByteJam Admin Panel</h1>
+        <p class="text-sm">companies, teams, voting windows and clear test data</p>
+      </div>
+
+      <div class="text-sm text-[var(--text-dark)]">
+        <div class="font-medium">Admin</div>
+      </div>
     </div>
+  </header>
 
+  <main class="max-w-6xl mx-auto">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <!-- Left: main admin card -->
+      <section class="lg:col-span-2 bg-[var(--panel)] p-6 rounded-2xl shadow-lg">
+        <h2 class="text-xl font-semibold mb-4">Admin Controls</h2>
 
-        <div id="results-section" class="section mt-4 hidden">
-    <h3 class="text-xl font-bold mb-4">Voting Results (This is sorted :) )</h3>
-    <table class="w-full table-auto border-collapse border border-gray-200">
-        <thead>
-            <tr class="bg-gray-100">
-                <th class="border px-4 py-2">Rank</th>
-                <th class="border px-4 py-2">Team ID</th>
-                <th class="border px-4 py-2">Team Name</th>
-                <th class="border px-4 py-2">Adjusted Score</th>
-                <th class="border px-4 py-2">Raw Avg</th>
-                <th class="border px-4 py-2">Votes</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tbody>
-    {% for rank, (team_id, data) in team_scores %}
-    <tr>
-        <td class="border px-4 py-2">{{ rank }}</td>
-        <td class="border px-4 py-2">{{ team_id }}</td>
-        <td class="border px-4 py-2">{{ data.team_name }}</td>
-        <td class="border px-4 py-2">{{ data.adjusted_score }}</td>
-        <td class="border px-4 py-2">{{ data.raw_average }}</td>
-        <td class="border px-4 py-2">{{ data.vote_count }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
+        <!-- Tabs -->
+        <nav class="flex gap-2 border-b border-white/6 pb-4 mb-4" role="tablist" aria-label="Admin sections">
+          <button id="tab-companies" class="tab px-3 py-2 rounded-md bg-white/6 text-white" onclick="showSection('companies')">Companies</button>
+          <button id="tab-teams" class="tab px-3 py-2 rounded-md text-white/70" onclick="showSection('teams')">Teams</button>
+          <button id="tab-results" class="tab px-3 py-2 rounded-md text-white/70" onclick="showSection('results')">Voting Results</button>
+          <button id="tab-settings" class="tab px-3 py-2 rounded-md text-white/70" onclick="showSection('settings')">Settings</button>
+        </nav>
 
-        </tbody>
-    </table>
-</div>
-
-
-        <div id="settings-section" class="section mt-4 hidden">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center mb-4">Voting Settings</h2>
-
-        <form method="POST" action="/save_voting_settings" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 font-semibold">Voting Start Date & Time:</label>
-                <input type="datetime-local" name="voting_start" required class="w-full p-2 border rounded">
-            </div>
-
-            <div>
-                <label class="block text-gray-700 font-semibold">Voting End Date & Time:</label>
-                <input type="datetime-local" name="voting_end" required class="w-full p-2 border rounded">
-            </div>
-
-            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Save Settings</button>
-        </form>
-    </div>
-
-             <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-    <h2 class="text-2xl font-bold text-center mb-4">Clear Data Settings</h2>
-
-    <form method="POST" action="/delete_data" class="space-y-4">
-        <div>
-            <label class="block text-gray-700 font-semibold">
-                <input type="checkbox" name="delete_teams" class="mr-2"> Delete all teams
-            </label>
+        <!-- RESULTS -->
+        <div id="results-section" class="section hidden" role="region" aria-labelledby="tab-results">
+          <h3 class="text-lg font-semibold mb-3">Voting Results</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full table-auto border-collapse text-sm">
+              <thead class="bg-white/6 text-[var(--muted)]">
+                <tr>
+                  <th class="px-3 py-2 text-left">Rank</th>
+                  <th class="px-3 py-2 text-left">Team ID</th>
+                  <th class="px-3 py-2 text-left">Team Name</th>
+                  <th class="px-3 py-2 text-left">Adjusted</th>
+                  <th class="px-3 py-2 text-left">Raw Avg</th>
+                  <th class="px-3 py-2 text-left">Votes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rank, (team_id, data) in team_scores %}
+                  <tr class="border-t border-white/6">
+                    <td class="px-3 py-2">{{ rank }}</td>
+                    <td class="px-3 py-2">{{ team_id }}</td>
+                    <td class="px-3 py-2">{{ data.team_name }}</td>
+                    <td class="px-3 py-2">{{ data.adjusted_score }}</td>
+                    <td class="px-3 py-2">{{ data.raw_average }}</td>
+                    <td class="px-3 py-2">{{ data.vote_count }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div>
-            <label class="block text-gray-700 font-semibold">
-                <input type="checkbox" name="delete_companies" class="mr-2"> Delete all companies
+        <!-- SETTINGS -->
+        <div id="settings-section" class="section hidden" role="region" aria-labelledby="tab-settings">
+          <h3 class="text-lg font-semibold mb-3">Voting Settings</h3>
+
+          <form method="POST" action="/save_voting_settings" class="grid gap-4 mb-6">
+            <label class="block text-sm">
+              Voting Start
+              <input type="datetime-local" name="voting_start" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
             </label>
-        </div>
-
-        <div>
-            <label class="block text-gray-700 font-semibold">
-                <input type="checkbox" name="delete_votes" class="mr-2"> Delete all votes
+            <label class="block text-sm">
+              Voting End
+              <input type="datetime-local" name="voting_end" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
             </label>
-        </div>
+            <button type="submit" class="w-full py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Save Settings</button>
+          </form>
 
-        <div>
-            <label class="block text-gray-700 font-semibold">
-                <input type="checkbox" name="delete_users" class="mr-2"> Delete all teams
+          <h4 class="text-lg font-semibold mb-2">Clear Data</h4>
+          <form method="POST" action="/delete_data" class="space-y-3">
+            <label class="flex items-center gap-3">
+              <input type="checkbox" name="delete_votes" class="h-4 w-4">
+              <span class="text-sm">Delete all votes</span>
             </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" name="delete_users" class="h-4 w-4">
+              <span class="text-sm">Delete all users</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" name="delete_teams" class="h-4 w-4">
+              <span class="text-sm">Delete all teams</span>
+            </label>
+            <label class="flex items-center gap-3">
+              <input type="checkbox" name="delete_companies" class="h-4 w-4">
+              <span class="text-sm">Delete all companies</span>
+            </label>
+
+            <button type="submit" class="w-full py-2 rounded bg-red-600 text-white font-semibold">Delete Selected Data</button>
+          </form>
         </div>
+      </section>
 
+      <!-- Right: companies & teams list -->
+      <aside class="bg-[var(--panel)] p-6 rounded-2xl shadow-lg">
+        <!-- Companies -->
+        <div id="companies-section" class="section">
+          <h3 class="text-lg font-semibold mb-3">Companies</h3>
 
-        <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Delete Selected Data</button>
-    </form>
-</div>
-</div>
-
-
-    <div id="companies-section" class="section mt-4">
-        <!-- Add Company -->
-        <form method="POST" action="/submit" class="mb-4 flex gap-2">
+          <!-- Add Company -->
+          <form method="POST" action="/submit" class="mb-4 flex gap-2">
             <input type="hidden" name="type" value="company">
             <input type="hidden" name="action" value="add">
-            <input type="text" name="company_name" required class="w-full p-2 border rounded" placeholder="Company Name">
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add</button>
-        </form>
+            <input type="text" name="company_name" required class="flex-1 p-2 rounded bg-white/5 border border-white/6" placeholder="New company name">
+            <button type="submit" class="px-4 py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Add</button>
+          </form>
 
-        <!-- Company List -->
-        <h3 class="text-xl font-bold mt-6">Companies</h3>
-        <ul class="space-y-2">
+          <ul class="space-y-3">
             {% for company, data in companies.items() %}
-                <li class="border rounded bg-gray-50 p-2">
-                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleMembers('company', '{{ company }}')">
-                        <span class="font-bold">{{ company }} (PIN: {{ data["pin"] }})</span>
+              {% set company_slug = company|lower|replace(' ','-')|replace("'",'')|replace('"','') %}
+              <li class="border border-white/6 rounded p-3 bg-white/4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-semibold">{{ company }}</div>
+                    <div class="text-xs text-[var(--muted)]">PIN: {{ data.pin }}</div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white text-sm" onclick="toggleMembers('company','{{ company_slug }}')">Members</button>
+
+                    <form method="POST" action="/submit" class="inline">
+                      <input type="hidden" name="type" value="company">
+                      <input type="hidden" name="action" value="remove">
+                      <input type="hidden" name="company_name" value="{{ company }}">
+                      <button type="submit" class="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white text-sm">Delete</button>
+                    </form>
+                  </div>
+                </div>
+
+                <!-- Members -->
+                <div id="company-{{ company_slug }}" class="mt-3 hidden">
+                  <ul class="space-y-2 text-sm text-[var(--muted)]">
+                    {% for member in data.members %}
+                      <li class="flex items-center justify-between bg-white/6 p-2 rounded">
+                        <span>{{ member }}</span>
                         <form method="POST" action="/submit">
-                            <input type="hidden" name="type" value="company">
-                            <input type="hidden" name="action" value="remove">
-                            <input type="hidden" name="company_name" value="{{ company }}">
-                            <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Delete</button>
+                          <input type="hidden" name="type" value="company">
+                          <input type="hidden" name="action" value="remove_member">
+                          <input type="hidden" name="company" value="{{ company }}">
+                          <input type="hidden" name="member_name" value="{{ member }}">
+                          <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
                         </form>
-                    </div>
+                      </li>
+                    {% endfor %}
+                  </ul>
 
-                    <!-- Hidden Members List -->
-                    <div id="company-{{ company }}" class="hidden mt-2">
-                        <ul class="ml-6 text-gray-600 space-y-1">
-                            {% for member in data["members"] %}
-                                <li class="flex justify-between items-center p-2 border rounded bg-gray-100">
-                                    <span>{{ member }}</span>
-                                    <form method="POST" action="/submit">
-                                        <input type="hidden" name="type" value="company">
-                                        <input type="hidden" name="action" value="remove_member">
-                                        <input type="hidden" name="company" value="{{ company }}">
-                                        <input type="hidden" name="member_name" value="{{ member }}">
-                                        <button type="submit" class="bg-red-400 text-white px-2 py-1 rounded hover:bg-red-500">Remove</button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-
-                        <!-- Add Member Form -->
-                        <form method="POST" action="/submit" class="ml-6 mt-2 flex gap-2">
-                            <input type="hidden" name="type" value="company">
-                            <input type="hidden" name="action" value="add_member">
-                            <input type="hidden" name="company" value="{{ company }}">
-                            <input type="hidden" name="pin" value="{{ data['pin'] }}">
-                            <input type="text" name="first_name" required class="p-2 border rounded" placeholder="First Name">
-                            <input type="text" name="last_name" required class="p-2 border rounded" placeholder="Last Name">
-                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Add</button>
-                        </form>
-                    </div>
-                </li>
+                  <!-- Add member -->
+                  <form method="POST" action="/submit" class="mt-3 flex gap-2">
+                    <input type="hidden" name="type" value="company">
+                    <input type="hidden" name="action" value="add_member">
+                    <input type="hidden" name="company" value="{{ company }}">
+                    <input type="hidden" name="pin" value="{{ data.pin }}">
+                    <input type="text" name="first_name" required class="flex-1 p-2 rounded bg-white/5 border border-white/6" placeholder="First name">
+                    <input type="text" name="last_name" required class="p-2 rounded bg-white/5 border border-white/6" placeholder="Last name">
+                    <button type="submit" class="px-3 py-2 rounded bg-green-600 text-white">Add</button>
+                  </form>
+                </div>
+              </li>
             {% endfor %}
-        </ul>
-    </div>
+          </ul>
+        </div>
 
-        <div id="teams-section" class="section mt-4 hidden">
-        <!-- Add Team -->
-<form method="POST" action="/submit" class="mt-6 flex gap-2">
-    <input type="hidden" name="type" value="team">
-    <input type="hidden" name="action" value="add">
-    <input type="text" name="team_name" required class="w-full p-2 border rounded" placeholder="Team Name">
-    <select name="division" class="p-2 border rounded">
-        <option value="Bits">Bits</option>
-        <option value="Bytes">Bytes</option>
-        <option value="IHCC">IHCC</option>
-    </select>
-    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add</button>
-</form>
+        <!-- Teams (hidden by default) -->
+        <div id="teams-section" class="section mt-6 hidden">
+          <h3 class="text-lg font-semibold mb-3">Teams</h3>
 
-<!-- Team List -->
-<h3 class="text-xl font-bold mt-6">Teams</h3>
-<ul class="space-y-2">
-    {% for division, teams in teams.items() %}
-        <!-- Display Division Name -->
-        <h4 class="font-semibold mt-4">{{ division }}</h4>
+          <!-- Add Team -->
+          <form method="POST" action="/submit" class="mb-4 flex gap-2">
+            <input type="hidden" name="type" value="team">
+            <input type="hidden" name="action" value="add">
+            <input type="text" name="team_name" required class="flex-1 p-2 rounded bg-white/5 border border-white/6" placeholder="Team name">
+            <select name="division" class="p-2 rounded bg-white/5 border border-white/6">
+              <option value="Bits">Bits</option>
+              <option value="Bytes">Bytes</option>
+              <option value="IHCC">IHCC</option>
+            </select>
+            <button type="submit" class="px-4 py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Add</button>
+          </form>
 
-        <!-- Display Teams under the Division -->
-        <ul class="ml-6">
-            {% for team, data in teams.items() %}
-                <li class="border rounded bg-gray-50 p-2">
-                    <div class="flex justify-between items-center cursor-pointer" onclick="toggleMembers('team', '{{ team }}')">
-                        <span class="font-bold">{{ team }}</span>
+          <div class="space-y-4">
+            {% for division, teams_in_div in teams.items() %}
+              <div>
+                <h4 class="text-sm font-medium text-[var(--primary)] mb-2">{{ division }}</h4>
+                <ul class="space-y-3 ml-3">
+                  {% for team, data in teams_in_div.items() %}
+                    {% set team_slug = team|lower|replace(' ','-')|replace("'",'')|replace('"','') %}
+                    <li class="border border-white/6 rounded p-3 bg-white/4">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <div class="font-semibold">{{ team }}</div>
+                          <div class="text-xs text-[var(--muted)]">Members: {{ data.members|length }}</div>
+                        </div>
 
-                        <!-- Add Member Button -->
-                    <button
-                        class="mt-2 bg-blue-500 text-white py-1 px-4 rounded"
-                        onclick="toggleAddMemberForm('{{ team }}')">
-                        Add Member
-                    </button>
+                        <div class="flex items-center gap-2">
+                          <button type="button" class="px-3 py-1 rounded bg-green-600 text-white text-sm" onclick="toggleMembers('team','{{ team_slug }}')">Show</button>
 
+                          <button type="button" class="px-3 py-1 rounded bg-blue-600 text-white text-sm" onclick="toggleAddMemberForm('{{ team_slug }}')">Add Member</button>
 
-                        <!-- Delete Team Button -->
-                        <form method="POST" action="/submit">
+                          <form method="POST" action="/submit" class="inline">
                             <input type="hidden" name="type" value="team">
                             <input type="hidden" name="action" value="remove">
                             <input type="hidden" name="team_name" value="{{ team }}">
                             <input type="hidden" name="division" value="{{ division }}">
-                            <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Delete</button>
-                        </form>
-                    </div>
+                            <button type="submit" class="px-3 py-1 rounded bg-red-600 text-white text-sm">Delete</button>
+                          </form>
+                        </div>
+                      </div>
 
-                    <!-- Hidden Members List -->
-<div id="team-{{ team }}" class="hidden mt-2">
-    <ul class="ml-6 text-gray-600 space-y-1">
-        <!-- Coaches Section -->
-        <li class="font-semibold">Coaches</li>
-        {% for member in data["members"] %}
-            {% if member.role == 'coach' %}
-                <li class="flex justify-between items-center p-2 border rounded bg-gray-100">
-                    <span>{{ member.first_name }} {{ member.last_name }} {{ member.pin }}</span>
-                    <form action="{{ url_for('handle_form') }}" method="POST">
-                        <input type="hidden" name="action" value="remove_member">
-                        <input type="hidden" name="type" value="team">
-                        <input type="hidden" name="team_name" value="{{ team }}">
-                        <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
-                        <button type="submit" class="text-red-500 hover:text-red-700">❌</button>
-                    </form>
-                </li>
-            {% endif %}
-        {% endfor %}
+                      <!-- team members -->
+                      <div id="team-{{ team_slug }}" class="mt-3 hidden">
+                        <ul class="space-y-2 text-sm text-[var(--muted)]">
+                          <li class="font-semibold">Coaches</li>
+                          {% for member in data.members %}
+                            {% if member.role == 'coach' %}
+                              <li class="flex items-center justify-between bg-white/6 p-2 rounded">
+                                <span>{{ member.first_name }} {{ member.last_name }} · {{ member.pin }}</span>
+                                <form method="POST" action="/submit">
+                                  <input type="hidden" name="type" value="team">
+                                  <input type="hidden" name="action" value="remove_member">
+                                  <input type="hidden" name="team_name" value="{{ team }}">
+                                  <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                                  <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
+                                </form>
+                              </li>
+                            {% endif %}
+                          {% endfor %}
 
-        <!-- Members Section -->
-        <li class="font-semibold mt-4">Members</li>
-        {% for member in data["members"] %}
-            {% if member.role == 'student' %}
-                <li class="flex justify-between items-center p-2 border rounded bg-gray-100">
-                    <span>{{ member.first_name }} {{ member.last_name }} | PIN: {{ member.pin }}</span>
-                    <form action="{{ url_for('handle_form') }}" method="POST">
-                        <input type="hidden" name="action" value="remove_member">
-                        <input type="hidden" name="type" value="team">
-                        <input type="hidden" name="team_name" value="{{ team }}">
-                        <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
-                        <button type="submit" class="text-red-500 hover:text-red-700">❌</button>
-                    </form>
-                </li>
-            {% endif %}
-        {% endfor %}
-    </ul>
-</div>
+                          <li class="font-semibold mt-3">Members</li>
+                          {% for member in data.members %}
+                            {% if member.role == 'student' %}
+                              <li class="flex items-center justify-between bg-white/6 p-2 rounded">
+                                <span>{{ member.first_name }} {{ member.last_name }} · PIN: {{ member.pin }}</span>
+                                <form method="POST" action="/submit">
+                                  <input type="hidden" name="type" value="team">
+                                  <input type="hidden" name="action" value="remove_member">
+                                  <input type="hidden" name="team_name" value="{{ team }}">
+                                  <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                                  <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
+                                </form>
+                              </li>
+                            {% endif %}
+                          {% endfor %}
+                        </ul>
 
-
-
-                    <!-- Add Student or Coach Form -->
-                    <form id="add-member-form-{{ team }}" action="/submit" method="POST" class="mt-4 hidden">
-                        <input type="hidden" name="type" value="team">
-                        <input type="hidden" name="action" value="add_member">
-                        <input type="hidden" name="team_name" value="{{ team }}">
-
-                        <label for="first_name" class="block mt-2 text-sm font-medium">First Name:</label>
-                        <input type="text" id="first_name" name="first_name" class="w-full p-2 border rounded-md" required>
-
-                        <label for="last_name" class="block mt-2 text-sm font-medium">Last Name:</label>
-                        <input type="text" id="last_name" name="last_name" class="w-full p-2 border rounded-md" required>
-
-                        <label for="role" class="block mt-2 text-sm font-medium">Role:</label>
-                        <select name="role" id="role" class="w-full p-2 border rounded-md" required>
+                        <!-- Add member form -->
+                        <form id="add-member-form-{{ team_slug }}" action="/submit" method="POST" class="mt-3 hidden">
+                          <input type="hidden" name="type" value="team">
+                          <input type="hidden" name="action" value="add_member">
+                          <input type="hidden" name="team_name" value="{{ team }}">
+                          <input type="text" name="first_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="First name">
+                          <input type="text" name="last_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="Last name">
+                          <select name="role" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2">
                             <option value="student">Student</option>
                             <option value="coach">Coach</option>
-                        </select>
-
-                        <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-500">Add</button>
-                    </form>
-                </li>
+                          </select>
+                          <button type="submit" class="w-full py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Add Member</button>
+                        </form>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
             {% endfor %}
-        </ul>
-    {% endfor %}
-</ul>
-
-
-            </div>
-
+          </div>
+        </div>
+      </aside>
     </div>
+  </main>
 
-</body>
+  <script>
+    // show default section on load
+    document.addEventListener('DOMContentLoaded', () => showSection('companies'));
 
-<script>
-function showSection(section) {
-    // Hide both sections
-    document.getElementById('companies-section').classList.add('hidden');
-    document.getElementById('teams-section').classList.add('hidden');
-    document.getElementById('results-section').classList.add('hidden');
-    document.getElementById('settings-section').classList.add('hidden');
+    function showSection(section) {
+      // hide all sections
+      document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+      // reset tab styles
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('bg-white/6');
+        t.classList.add('text-white/70');
+      });
 
-    // Remove active class from both tabs
-    document.getElementById('companies-tab').classList.remove('border-gray-500');
-    document.getElementById('teams-tab').classList.remove('border-gray-500');
-    document.getElementById('results-tab').classList.remove('border-gray-500');
-    document.getElementById('settings-tab').classList.remove('border-gray-500');
-
-    // Show the selected section
-    if (section === 'companies') {
+      // show requested
+      if(section === 'companies') {
         document.getElementById('companies-section').classList.remove('hidden');
-        document.getElementById('companies-tab').classList.add('border-gray-500');
-    } else if (section === 'teams') {
+        document.getElementById('tab-companies').classList.add('bg-white/6');
+        document.getElementById('tab-companies').classList.remove('text-white/70');
+      } else if(section === 'teams') {
         document.getElementById('teams-section').classList.remove('hidden');
-        document.getElementById('teams-tab').classList.add('border-gray-500');
-    } else if (section === 'results') {
+        document.getElementById('tab-teams').classList.add('bg-white/6');
+        document.getElementById('tab-teams').classList.remove('text-white/70');
+      } else if(section === 'results') {
         document.getElementById('results-section').classList.remove('hidden');
-        document.getElementById('results-tab').classList.add('border-gray-500');
-    } else if (section === 'settings') {
+        document.getElementById('tab-results').classList.add('bg-white/6');
+        document.getElementById('tab-results').classList.remove('text-white/70');
+      } else if(section === 'settings') {
         document.getElementById('settings-section').classList.remove('hidden');
-        document.getElementById('settings-tab').classList.add('border-gray-500');
-    }
-}
-
-function toggleAddMemberForm(teamName) {
-        var form = document.getElementById('add-member-form-' + teamName);
-        // Toggle the visibility of the form
-        form.classList.toggle('hidden');
+        document.getElementById('tab-settings').classList.add('bg-white/6');
+        document.getElementById('tab-settings').classList.remove('text-white/70');
+      }
     }
 
+    // safe toggles; IDs use sanitized slugs from the template
+    function toggleMembers(prefix, slug) {
+      const el = document.getElementById(prefix + '-' + slug);
+      if(!el) return;
+      el.classList.toggle('hidden');
+    }
 
-</script>
+    function toggleAddMemberForm(slug) {
+      const el = document.getElementById('add-member-form-' + slug);
+      if(!el) return;
+      el.classList.toggle('hidden');
+    }
+  </script>
+</body>
 </html>

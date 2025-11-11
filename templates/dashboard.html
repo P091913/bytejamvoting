@@ -1,80 +1,192 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teams</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 p-6">
-
-    <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
-    <h3 class="text-xl font-bold">Welcome, {{ first_name }} {{ last_name }}</h3>
-    <p>Company Pin: {{ company_pin }}</p>
-
-    <!-- Displaying teams -->
-    <div class="mt-6">
-        <h4 class="font-semibold">Teams</h4>
-        <ul class="space-y-4">
-            {% for division, teams in teams.items() %}
-                <h4 class="font-semibold mt-4">{{ division }}</h4>
-                <ul class="ml-6">
-                    {% for team, data in teams.items() %}
-                        <!-- Check if the user has voted for this team -->
-                        {% set voted_for_team = data.has_voted %}
-
-                        <li class="border rounded bg-gray-50 p-2">
-                            <div class="flex justify-between items-center cursor-pointer {% if voted_for_team %}bg-green-200{% else %}bg-gray-50{% endif %}" onclick="toggleMembers('{{ team }}')" {% if voted_for_team %} style="pointer-events: none;" {% endif %}>
-                                <span class="font-bold">{{ team }} {% if voted_for_team %}✔️{% endif %}</span>
-                            </div>
-
-                            <!-- Voting Section (Initially hidden) -->
-                            <div id="vote-{{ team }}" class="mt-4 bg-gray-50 p-4 rounded {% if voted_for_team %}bg-gray-200{% endif %} hidden">
-                                <h3 class="text-lg font-bold">{{ team }} Voting</h3>
-                                <form action="{{ url_for('submit_vote') }}" method="POST" {% if voted_for_team %}disabled{% endif %}>
-                                    <input type="hidden" name="team" value="{{ team }}">
-                                    <p>Role: {{ session['role'] }}</p>
-                                    {% if session['role'] == "student" %}
-                                        {% for category in ["Amazement", "Theme", "Performance"] %}
-                                            <label class="block mt-2">{{ category }}</label>
-                                            <select name="{{ category | lower | replace(' ', '_') }}" class="w-full p-2 border rounded mb-2" {% if voted_for_team %}disabled style="pointer-events: none;"{% endif %}>
-                                                {% for i in range(6) %}
-                                                    <option value="{{ i }}">{{ i }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        {% endfor %}
-                                    {% else %}
-                                        {% for category in ["Creativity", "VisualDesign", "Professionalism", "Communication", "Performance"] %}
-                                            <label class="block mt-2">{{ category }}</label>
-                                            <select name="{{ category | lower | replace(' ', '_') }}" class="w-full p-2 border rounded mb-2" {% if voted_for_team %}disabled style="pointer-events: none;"{% endif %}>
-                                                {% for i in range(6) %}
-                                                    <option value="{{ i }}">{{ i }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        {% endfor %}
-                                    {% endif %}
-
-                                    {% if not voted_for_team %}
-                                        <button type="submit" class="bg-blue-500 text-white w-full p-2 rounded hover:bg-blue-600">
-                                            Submit Vote
-                                        </button>
-                                    {% endif %}
-                                </form>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
-
-<script>
-    function toggleMembers(team) {
-        let voteElement = document.getElementById("vote-" + team);
-        voteElement.classList.toggle('hidden');
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teams — Voting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --primary:#F6A42D; /* orange */
+      --dark:#2B2B2B;    /* charcoal */
+      --text-dark:#1A1A1A;
     }
-</script>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border: 1px solid rgba(255,255,255,0.04); }
+    .muted { color: #bdbdbd; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[var(--dark)] text-white">
 
+  <!-- top hero -->
+  <header class="bg-[var(--primary)] text-[var(--text-dark)] py-8 px-6">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">ByteJamVote</h1>
+        <p class="text-sm mt-1">Pick a team and submit your scores</p>
+      </div>
+      <div class="text-right text-sm muted">
+        <div>{{ first_name }} {{ last_name }}</div>
+        <div class="mt-1">Company PIN: <span class="font-semibold text-[var(--text-dark)]">{{ company_pin }}</span></div>
+
+        {% if session.get('role') == 'company' %}
+          <div class="text-xs mt-1 text-white/80">Note: Business accounts only see IHCC teams.</div>
+        {% elif session.get('role') == 'coach' and session.get('team_division') in ['Bits','Bytes'] %}
+          {% set coach_div = session.get('team_division') %}
+          <div class="text-xs mt-1 text-white/80">Note: As a {{ coach_div }} coach you may only vote for the opposite division.</div>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- main content -->
+  <main class="flex-1 py-10 px-6">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- left column: teams list -->
+      <section class="lg:col-span-2 card p-6 rounded-2xl shadow-lg">
+        <h2 class="text-xl font-semibold mb-4 text-white">Teams</h2>
+
+        {# determine allowed divisions according to session #}
+        {% set allowed_divisions = [] %}
+        {% if session.get('role') == 'company' %}
+          {% set _ = allowed_divisions.append('IHCC') %}
+        {% elif session.get('role') == 'coach' %}
+          {% set coach_div = session.get('team_division') %}
+          {% if coach_div == 'Bits' %}
+            {% set _ = allowed_divisions.append('Bytes') %}
+          {% elif coach_div == 'Bytes' %}
+            {% set _ = allowed_divisions.append('Bits') %}
+          {% else %}
+            {% for d in teams.keys() %}
+              {% set _ = allowed_divisions.append(d) %}
+            {% endfor %}
+          {% endif %}
+        {% else %}
+          {% for d in teams.keys() %}
+            {% set _ = allowed_divisions.append(d) %}
+          {% endfor %}
+        {% endif %}
+
+        {# iterate divisions but only render those allowed #}
+        {% for division, teams_in_div in teams.items() %}
+          {% if division in allowed_divisions %}
+            <div class="mb-6">
+              <h3 class="text-sm font-medium uppercase text-[var(--primary)] mb-3">{{ division }}</h3>
+
+              <ul class="space-y-4">
+                {% for team, data in teams_in_div.items() %}
+                  {% set voted_for_team = data.has_voted %}
+                  {% set team_slug = team|lower|replace(' ','-')|replace("'",'')|replace('"','') %}
+
+                  <li class="border rounded-lg overflow-hidden">
+                    <div class="flex items-center justify-between p-4 cursor-pointer
+                                {% if voted_for_team %}bg-gray-200 text-[var(--text-dark)] pointer-events-none{% else %}bg-white/5 hover:bg-white/10{% endif %}"
+                         onclick="toggleMembers('{{ team_slug }}')"
+                         role="button" aria-expanded="false" aria-controls="vote-{{ team_slug }}">
+                      <div class="flex items-center gap-3">
+                        <div class="w-2 h-8 rounded bg-[var(--primary)]"></div>
+                        <div>
+                          <div class="font-semibold">{{ team }}</div>
+                          <div class="text-xs muted">
+                            {{ data.vote_count if data.vote_count is defined else '' }} votes
+                            {% if data.division is defined %} • {{ data.division }}{% endif %}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-3">
+                        {% if voted_for_team %}
+                          <span class="text-sm font-semibold text-green-700 bg-green-100 px-3 py-1 rounded-full">Voted ✓</span>
+                        {% else %}
+                          <svg class="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 5l7 7-7 7" /></svg>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <!-- vote panel -->
+                    <div id="vote-{{ team_slug }}" class="p-4 bg-white/3 hidden">
+                      <h4 class="font-semibold mb-3 text-lg">{{ team }} Voting</h4>
+
+                      <form action="{{ url_for('submit_vote') }}" method="POST" {% if voted_for_team %}aria-hidden="true"{% endif %}>
+                        <input type="hidden" name="team" value="{{ team }}">
+                        <p class="text-sm muted mb-3">Role: <span class="text-white">{{ session['role'] }}</span></p>
+
+                        {% if session['role'] == "student" %}
+                          {% for category in ["Amazement", "Theme", "Performance"] %}
+                            <label class="block mt-2 mb-1 text-sm">{{ category }}</label>
+                            <select name="{{ category | lower | replace(' ', '_') }}" class="w-full p-2 rounded bg-white/5 border border-white/6 text-white mb-2" {% if voted_for_team %}disabled{% endif %}>
+                              {% for i in range(6) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                              {% endfor %}
+                            </select>
+                          {% endfor %}
+                        {% else %}
+                          {% for category in ["Creativity", "VisualDesign", "Professionalism", "Communication", "Performance"] %}
+                            <label class="block mt-2 mb-1 text-sm">{{ category }}</label>
+                            <select name="{{ category | lower | replace(' ', '_') }}" class="w-full p-2 rounded bg-white/5 border border-white/6 text-white mb-2" {% if voted_for_team %}disabled{% endif %}>
+                              {% for i in range(6) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                              {% endfor %}
+                            </select>
+                          {% endfor %}
+                        {% endif %}
+
+                        {% if not voted_for_team %}
+                          <button type="submit" class="mt-4 w-full py-2 rounded bg-[var(--primary)] text-[var(--text-dark)] font-semibold hover:bg-[#e6951f] transition">
+                            Submit Vote
+                          </button>
+                        {% else %}
+                          <div class="mt-4 text-sm muted">You have already voted for this team.</div>
+                        {% endif %}
+                      </form>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endfor %}
+
+      </section>
+
+      <!-- right column: quick info / leaderboard -->
+      <aside class="card p-6 rounded-2xl shadow-lg">
+        <h3 class="text-lg font-semibold mb-3">Leaderboard</h3>
+        {% if team_scores %}
+          <ol class="space-y-3">
+            {% for idx, item in team_scores %}
+              {% set t_id = item[0] %}
+              {% set t_info = item[1] %}
+              <li class="flex items-center justify-between bg-white/5 p-3 rounded">
+                <div>
+                  <div class="text-sm muted">#{{ idx }} — {{ t_info.team_name }}</div>
+                  <div class="text-xs muted">Avg: {{ t_info.raw_average }} • Votes: {{ t_info.vote_count }}</div>
+                </div>
+                <div class="font-semibold text-[var(--primary)]">{{ t_info.adjusted_score }}</div>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p class="muted text-sm">No scores yet — be the first to vote.</p>
+        {% endif %}
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    // Toggle panel for a given team slug
+    function toggleMembers(teamSlug){
+      const panel = document.getElementById("vote-" + teamSlug);
+      if(!panel) return;
+      panel.classList.toggle("hidden");
+      // update aria-expanded on the clickable header if needed
+      const header = panel.previousElementSibling;
+      if(header){
+        const expanded = header.getAttribute('aria-expanded') === 'true';
+        header.setAttribute('aria-expanded', (!expanded).toString());
+      }
+    }
+  </script>
 </body>
 </html>

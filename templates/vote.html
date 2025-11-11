@@ -1,47 +1,138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vote for Your Favorite Team</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8" />
+  <title>Vote for Your Favorite Team</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root{
+      --primary:#F6A42D; /* orange */
+      --dark:#2B2B2B;    /* charcoal */
+      --panel:#1f1f1f;
+      --muted:#bdbdbd;
+    }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+  </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
 
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 class="text-2xl font-bold text-center mb-4">Vote for a Team</h2>
+<body class="min-h-screen bg-[var(--dark)] text-white flex items-center justify-center p-6">
 
-        <form method="POST" class="space-y-4">
-            <label class="block text-gray-700 font-semibold">Select Team:</label>
-            <select name="team" class="w-full p-2 border rounded">
-                {% for team in teams %}
-                    <option value="{{ team }}">{{ team }}</option>
-                {% endfor %}
-            </select>
+  <main class="w-full max-w-2xl">
+    <!-- Hero -->
+    <header class="mb-8 rounded-xl overflow-hidden">
+      <div class="bg-[var(--primary)] text-[var(--dark)] p-8">
+        <h1 class="text-2xl font-bold">Vote for each team</h1>
+        <p class="text-sm mt-1">Click on a team to rate there project and delivery, choose carefully.. you only get to vote once!</p>
+      </div>
+    </header>
 
-            <div>
-                <label class="block text-gray-700 font-semibold">Amazement (1-10):</label>
-                <input type="number" name="amazement" min="1" max="5" required class="w-full p-2 border rounded">
-            </div>
+    <!-- Form card -->
+    <section class="bg-[var(--panel)] p-6 rounded-2xl shadow-lg">
+      <form method="POST" action="{{ url_for('submit_vote') }}" id="voteForm" class="space-y-5" novalidate>
+        <!-- Team selector -->
+        <label class="block text-sm font-medium text-[var(--muted)]">Select Team</label>
+        <select name="team" required class="w-full p-3 rounded bg-white/5 border border-white/6 text-white outline-none focus:ring-2 focus:ring-[var(--primary)]">
+          <option value="" disabled selected>Choose a team</option>
+          {% for team in teams %}
+            <option value="{{ team }}">{{ team }}</option>
+          {% endfor %}
+        </select>
 
-            <div>
-                <label class="block text-gray-700 font-semibold">Quality (1-10):</label>
-                <input type="number" name="quality" min="1" max="5" required class="w-full p-2 border rounded">
-            </div>
+        <!-- Numeric inputs grouped -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-[var(--muted)]">Amazement (1–5)</label>
+            <input type="number" name="amazement" id="amazement" min="1" max="5" required
+                   class="w-full p-3 rounded bg-white/5 border border-white/6 text-white outline-none" />
+          </div>
 
-            <div>
-                <label class="block text-gray-700 font-semibold">Delivery (1-10):</label>
-                <input type="number" name="delivery" min="1" max="5" required class="w-full p-2 border rounded">
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-[var(--muted)]">Quality (1–5)</label>
+            <input type="number" name="quality" id="quality" min="1" max="5" required
+                   class="w-full p-3 rounded bg-white/5 border border-white/6 text-white outline-none" />
+          </div>
 
-            <div>
-                <label class="block text-gray-700 font-semibold">Overall Design (1-10):</label>
-                <input type="number" name="design" min="1" max="5" required class="w-full p-2 border rounded">
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-[var(--muted)]">Delivery (1–5)</label>
+            <input type="number" name="delivery" id="delivery" min="1" max="5" required
+                   class="w-full p-3 rounded bg-white/5 border border-white/6 text-white outline-none" />
+          </div>
 
-            <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Submit Vote</button>
-        </form>
-    </div>
+          <div>
+            <label class="block text-sm font-medium text-[var(--muted)]">Overall Design (1–5)</label>
+            <input type="number" name="design" id="design" min="1" max="5" required
+                   class="w-full p-3 rounded bg-white/5 border border-white/6 text-white outline-none" />
+          </div>
+        </div>
 
+        <p id="formError" class="text-sm text-rose-400 hidden" role="alert"></p>
+
+        <button type="submit" class="w-full py-3 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold hover:bg-[#e6951f] transition">
+          Submit Vote
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // Client-side validation + clamp
+    const form = document.getElementById('voteForm');
+    const inputs = ['amazement','quality','delivery','design'];
+    const formError = document.getElementById('formError');
+
+    function showError(msg){
+      formError.textContent = msg;
+      formError.classList.remove('hidden');
+    }
+    function clearError(){
+      formError.textContent = '';
+      formError.classList.add('hidden');
+    }
+
+    form.addEventListener('submit', (ev) => {
+      clearError();
+
+      // team selected
+      const team = form.querySelector('select[name="team"]').value;
+      if(!team){
+        ev.preventDefault();
+        showError('Please select a team to vote for.');
+        return;
+      }
+
+      // validate numbers and coerce
+      for(const name of inputs){
+        const el = document.getElementById(name);
+        if(!el) continue;
+        let v = el.value.trim();
+        if(v === ''){
+          ev.preventDefault();
+          showError('All scoring fields are required.');
+          return;
+        }
+        // coerce to int
+        const num = Number(v);
+        if(!Number.isInteger(num) || num < parseInt(el.min) || num > parseInt(el.max)){
+          ev.preventDefault();
+          showError(`Scores must be integers between ${el.min} and ${el.max}.`);
+          return;
+        }
+        // clamp to be safe
+        el.value = Math.min(Math.max(num, parseInt(el.min)), parseInt(el.max));
+      }
+    });
+
+    // small UX: ensure number inputs only accept integers on blur
+    inputs.forEach(name => {
+      const el = document.getElementById(name);
+      if(!el) return;
+      el.addEventListener('input', () => {
+        // remove decimals as user types
+        el.value = el.value.replace(/[^\d]/g, '');
+      });
+    });
+  </script>
 </body>
 </html>
