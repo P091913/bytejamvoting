@@ -37,7 +37,7 @@ _ADMIN_PASSWORD_HASH = generate_password_hash(_admin_password_plain)
 _allowed_env = os.environ.get("ALLOWED_CONN", "167.142.113.82,127.0.0.1")
 allowed_conn = [ip.strip() for ip in _allowed_env.split(",") if ip.strip()]
 
-# Helper to permit all (for local dev) when explicitly enabled
+# Helper to permit all (for locoutal dev) when explicitly enabled
 ALLOW_ALL = os.environ.get("ALLOW_ALL", "false").lower() in ("1", "true", "yes")
 
 db = SQLAlchemy(app)
@@ -203,7 +203,15 @@ def admin_panel():
     company_data = {
         c.name: {
             "pin": c.pin,
-            "members": [f"{u.first_name} {u.last_name}" for u in c.users]
+            # keep company members as mappings too (so admin can see pins)
+            "members": [
+                {
+                    "first_name": u.first_name,
+                    "last_name": u.last_name,
+                    "pin": u.pin,
+                    "role": u.role
+                } for u in c.users
+            ]
         }
         for c in companies
     }
@@ -252,10 +260,18 @@ def admin_panel():
         division = t.division
         if division not in team_data:
             team_data[division] = {}
-        # return member objects if template expects them, otherwise names:
+        # return member objects (dicts) so template can read pin, role, names
+        members = User.query.filter_by(team_id=t.id).all()
         team_data[division][t.name] = {
             "division": t.division,
-            "members": [f"{u.first_name} {u.last_name}" for u in User.query.filter_by(team_id=t.id).all()]
+            "members": [
+                {
+                    "first_name": u.first_name,
+                    "last_name": u.last_name,
+                    "pin": u.pin,
+                    "role": u.role
+                } for u in members
+            ]
         }
 
     return render_template(
@@ -264,6 +280,7 @@ def admin_panel():
         teams=team_data,
         team_scores=enumerated_scores
     )
+
 
 
 @app.route("/create")
@@ -382,12 +399,18 @@ def register_user():
             flash("Name and company pin are required.", "danger")
             return redirect(url_for('create'))
 
+        # Try to find a company matching that pin
         company = Company.query.filter_by(pin=company_pin).first()
-        if not company:
-            flash("Company not found for that pin.", "danger")
-            return redirect(url_for('create'))
 
-        user = User.query.filter_by(first_name=first_name, last_name=last_name, company_id=company.id).first()
+        user = None
+        # 1) If a company exists for that pin, try matching user by company
+        if company:
+            user = User.query.filter_by(first_name=first_name, last_name=last_name, company_id=company.id).first()
+
+        # 2) Fallback: match by first/last + pin (covers team members who have pins but no company_id)
+        if not user:
+            user = User.query.filter_by(first_name=first_name, last_name=last_name, pin=company_pin).first()
+
         if user:
             session['user_id'] = user.id
             session['first_name'] = user.first_name
@@ -397,8 +420,9 @@ def register_user():
             flash("Welcome back!", "success")
             return redirect(url_for('dashboard'))
         else:
-            flash("User not found in that company. If you should be there, ask an admin to add you.", "danger")
+            flash("User not found. If you should be there, ask an admin to add you.", "danger")
             return redirect(url_for('create'))
+
 
     elif user_type == '2':  # guest
         try:
@@ -670,7 +694,7 @@ def handle_form():
         app.logger.exception("Error handling admin submit")
         flash("An error occurred processing your request.", "danger")
 
-    return redirect('/')
+    return redirect('/admin')
 
 
 # ---------- Start ----------

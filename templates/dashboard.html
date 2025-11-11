@@ -49,24 +49,45 @@
 
         {# determine allowed divisions according to session #}
         {% set allowed_divisions = [] %}
-        {% if session.get('role') == 'company' %}
-          {% set _ = allowed_divisions.append('IHCC') %}
-        {% elif session.get('role') == 'coach' %}
-          {% set coach_div = session.get('team_division') %}
-          {% if coach_div == 'Bits' %}
-            {% set _ = allowed_divisions.append('Bytes') %}
-          {% elif coach_div == 'Bytes' %}
-            {% set _ = allowed_divisions.append('Bits') %}
-          {% else %}
-            {% for d in teams.keys() %}
-              {% set _ = allowed_divisions.append(d) %}
-            {% endfor %}
-          {% endif %}
-        {% else %}
-          {% for d in teams.keys() %}
-            {% set _ = allowed_divisions.append(d) %}
-          {% endfor %}
-        {% endif %}
+
+{# Business accounts only see IHCC #}
+{% if session.get('role') == 'company' %}
+  {% set _ = allowed_divisions.append('IHCC') %}
+
+{# Coaches see the opposite division (existing behavior) #}
+{% elif session.get('role') == 'coach' %}
+  {% set coach_div = session.get('team_division') %}
+  {% if coach_div == 'Bits' %}
+    {% set _ = allowed_divisions.append('Bytes') %}
+  {% elif coach_div == 'Bytes' %}
+    {% set _ = allowed_divisions.append('Bits') %}
+  {% else %}
+    {# coach without division: show all (safe default) #}
+    {% for d in teams.keys() %}
+      {% set _ = allowed_divisions.append(d) %}
+    {% endfor %}
+  {% endif %}
+
+{# IHCC students: only see Bits & Bytes (UI-only) #}
+{% elif session.get('role') == 'student' %}
+  {% set student_company_div = session.get('company_division') %}
+  {% if student_company_div == 'IHCC' %}
+    {% set _ = allowed_divisions.append('Bits') %}
+    {% set _ = allowed_divisions.append('Bytes') %}
+  {% else %}
+    {# student with no company_division set: show all divisions by default #}
+    {% for d in teams.keys() %}
+      {% set _ = allowed_divisions.append(d) %}
+    {% endfor %}
+  {% endif %}
+
+{# all other roles (guests, etc.) see all divisions #}
+{% else %}
+  {% for d in teams.keys() %}
+    {% set _ = allowed_divisions.append(d) %}
+  {% endfor %}
+{% endif %}
+
 
         {# iterate divisions but only render those allowed #}
         {% for division, teams_in_div in teams.items() %}

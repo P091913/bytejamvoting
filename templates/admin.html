@@ -156,14 +156,26 @@
                 <!-- Members -->
                 <div id="company-{{ company_slug }}" class="mt-3 hidden">
                   <ul class="space-y-2 text-sm text-[var(--muted)]">
+                    {# members could be objects or strings; handle both #}
                     {% for member in data.members %}
                       <li class="flex items-center justify-between bg-white/6 p-2 rounded">
-                        <span>{{ member }}</span>
+                        <div>
+                          {% if member is mapping %}
+                            {{ member.first_name }} {{ member.last_name }}{% if member.pin is defined %} · PIN: {{ member.pin }}{% endif %}
+                          {% else %}
+                            {{ member }}
+                          {% endif %}
+                        </div>
+
                         <form method="POST" action="/submit">
                           <input type="hidden" name="type" value="company">
                           <input type="hidden" name="action" value="remove_member">
                           <input type="hidden" name="company" value="{{ company }}">
-                          <input type="hidden" name="member_name" value="{{ member }}">
+                          {% if member is mapping %}
+                            <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                          {% else %}
+                            <input type="hidden" name="member_name" value="{{ member }}">
+                          {% endif %}
                           <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
                         </form>
                       </li>
@@ -236,31 +248,51 @@
                       <div id="team-{{ team_slug }}" class="mt-3 hidden">
                         <ul class="space-y-2 text-sm text-[var(--muted)]">
                           <li class="font-semibold">Coaches</li>
+
+                          {# Coaches loop - tolerant to mapping or string #}
                           {% for member in data.members %}
-                            {% if member.role == 'coach' %}
-                              <li class="flex items-center justify-between bg-white/6 p-2 rounded">
-                                <span>{{ member.first_name }} {{ member.last_name }} · {{ member.pin }}</span>
-                                <form method="POST" action="/submit">
-                                  <input type="hidden" name="type" value="team">
-                                  <input type="hidden" name="action" value="remove_member">
-                                  <input type="hidden" name="team_name" value="{{ team }}">
-                                  <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
-                                  <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
-                                </form>
-                              </li>
+                            {% if member is mapping %}
+                              {% if member.role == 'coach' %}
+                                <li class="flex items-center justify-between bg-white/6 p-2 rounded">
+                                  <div>{{ member.first_name }} {{ member.last_name }} · {{ member.pin }}</div>
+                                  <form method="POST" action="/submit">
+                                    <input type="hidden" name="type" value="team">
+                                    <input type="hidden" name="action" value="remove_member">
+                                    <input type="hidden" name="team_name" value="{{ team }}">
+                                    <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                                    <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
+                                  </form>
+                                </li>
+                              {% endif %}
                             {% endif %}
                           {% endfor %}
 
                           <li class="font-semibold mt-3">Members</li>
+
+                          {# Members loop - tolerant to mapping or string #}
                           {% for member in data.members %}
-                            {% if member.role == 'student' %}
+                            {% if member is mapping %}
+                              {% if member.role == 'student' %}
+                                <li class="flex items-center justify-between bg-white/6 p-2 rounded">
+                                  <div>{{ member.first_name }} {{ member.last_name }} · PIN: {{ member.pin }}</div>
+                                  <form method="POST" action="/submit">
+                                    <input type="hidden" name="type" value="team">
+                                    <input type="hidden" name="action" value="remove_member">
+                                    <input type="hidden" name="team_name" value="{{ team }}">
+                                    <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                                    <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
+                                  </form>
+                                </li>
+                              {% endif %}
+                            {% else %}
+                              {# fallback for string entries (e.g. "Adam Ziv") #}
                               <li class="flex items-center justify-between bg-white/6 p-2 rounded">
-                                <span>{{ member.first_name }} {{ member.last_name }} · PIN: {{ member.pin }}</span>
+                                <div>{{ member }}</div>
                                 <form method="POST" action="/submit">
                                   <input type="hidden" name="type" value="team">
                                   <input type="hidden" name="action" value="remove_member">
                                   <input type="hidden" name="team_name" value="{{ team }}">
-                                  <input type="hidden" name="member_name" value="{{ member.first_name }} {{ member.last_name }}">
+                                  <input type="hidden" name="member_name" value="{{ member }}">
                                   <button type="submit" class="px-2 py-1 rounded bg-red-500 text-white text-sm">Remove</button>
                                 </form>
                               </li>
@@ -269,18 +301,22 @@
                         </ul>
 
                         <!-- Add member form -->
-                        <form id="add-member-form-{{ team_slug }}" action="/submit" method="POST" class="mt-3 hidden">
-                          <input type="hidden" name="type" value="team">
-                          <input type="hidden" name="action" value="add_member">
-                          <input type="hidden" name="team_name" value="{{ team }}">
-                          <input type="text" name="first_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="First name">
-                          <input type="text" name="last_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="Last name">
-                          <select name="role" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2">
-                            <option value="student">Student</option>
-                            <option value="coach">Coach</option>
-                          </select>
-                          <button type="submit" class="w-full py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Add Member</button>
-                        </form>
+                        <!-- Add member form (inside the teams loop) -->
+<form id="add-member-form-{{ team_slug }}" action="/submit" method="POST" class="mt-3 hidden">
+  <input type="hidden" name="type" value="team">
+  <input type="hidden" name="action" value="add_member">
+  <input type="hidden" name="team_name" value="{{ team }}">
+  <!-- hidden pin for new member (populated by JS) -->
+  <input type="hidden" name="pin" id="add-pin-{{ team_slug }}" value="">
+  <input type="text" name="first_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="First name">
+  <input type="text" name="last_name" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2" placeholder="Last name">
+  <select name="role" required class="w-full p-2 rounded bg-white/5 border border-white/6 mb-2">
+    <option value="student">Student</option>
+    <option value="coach">Coach</option>
+  </select>
+  <button type="submit" class="w-full py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Add Member</button>
+</form>
+
                       </div>
                     </li>
                   {% endfor %}
@@ -338,6 +374,33 @@
       if(!el) return;
       el.classList.toggle('hidden');
     }
+
+    function toggleAddMemberForm(slug) {
+    const el = document.getElementById('add-member-form-' + slug);
+    if(!el) return;
+    el.classList.toggle('hidden');
+
+    // if we're showing the form, generate a pin and put into the hidden input
+    if (!el.classList.contains('hidden')) {
+      const pinInput = document.getElementById('add-pin-' + slug);
+      if (pinInput) {
+        // generate random 4-digit pin (1000-9999)
+        const pin = Math.floor(1000 + Math.random() * 9000).toString();
+        pinInput.value = pin;
+        // optionally show it to the admin while adding (for manual copy)
+        // create small ephemeral hint if not already present
+        if (!document.getElementById('pin-hint-' + slug)) {
+          const hint = document.createElement('div');
+          hint.id = 'pin-hint-' + slug;
+          hint.className = 'text-xs text-[var(--muted)] mt-1';
+          hint.innerText = 'Generated PIN: ' + pin;
+          el.insertBefore(hint, el.querySelector('button'));
+        } else {
+          document.getElementById('pin-hint-' + slug).innerText = 'Generated PIN: ' + pin;
+        }
+      }
+    }
+  }
   </script>
 </body>
 </html>
