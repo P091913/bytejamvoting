@@ -21,11 +21,13 @@ app = Flask(__name__)
 # Use environment secret if available; fallback to a random secret for dev (not for prod)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
-# DB config
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL',
-    'postgresql://user:djDBd9T2RjVHhDaNRl6xbVRTxy2GAx9Y@dpg-d3r3c70gjchc73bpcobg-a.oregon-postgres.render.com/bytejamvote'
-)
+# DB config: set DATABASE_URL on Render (falls back to a local SQLite file for dev)
+_db_url = os.environ.get('DATABASE_URL', 'sqlite:///bytejamvote.db')
+# SQLAlchemy no longer accepts the legacy "postgres://" scheme
+if _db_url.startswith('postgres://'):
+    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Admin credentials: pull password from env if possible (safer than hardcoding)
@@ -37,8 +39,8 @@ _ADMIN_PASSWORD_HASH = generate_password_hash(_admin_password_plain)
 _allowed_env = os.environ.get("ALLOWED_CONN", "167.142.113.82,127.0.0.1")
 allowed_conn = [ip.strip() for ip in _allowed_env.split(",") if ip.strip()]
 
-# Helper to permit all (for locoutal dev) when explicitly enabled
-ALLOW_ALL = os.environ.get("ALLOW_ALL", "false").lower() in ("1", "true", "yes")
+# IP restrictions are OFF by default for now; set ALLOW_ALL=false to re-enable them
+ALLOW_ALL = os.environ.get("ALLOW_ALL", "true").lower() in ("1", "true", "yes")
 
 db = SQLAlchemy(app)
 
@@ -112,6 +114,11 @@ class VotingSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     voting_start = db.Column(db.DateTime, nullable=False)
     voting_end = db.Column(db.DateTime, nullable=False)
+
+
+# Create tables at import time so it also runs under gunicorn (not just `python app.py`)
+with app.app_context():
+    db.create_all()
 
 
 # ---------- Helpers ----------
@@ -699,8 +706,6 @@ def handle_form():
 
 # ---------- Start ----------
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     # Turn off debug for production. Use env var FLASK_DEBUG if needed.
     debug_mode = os.environ.get("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
     app.run(debug=debug_mode)
