@@ -21,11 +21,17 @@ app = Flask(__name__)
 # Use environment secret if available; fallback to a random secret for dev (not for prod)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 
-# DB config: set DATABASE_URL on Render (falls back to a local SQLite file for dev)
-_db_url = os.environ.get('DATABASE_URL', 'sqlite:///bytejamvote.db')
-# SQLAlchemy no longer accepts the legacy "postgres://" scheme
-if _db_url.startswith('postgres://'):
-    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+# DB config: DATABASE_URL env var overrides the default Render database below
+_db_url = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://movement_ulas_user:9Kh8ZtfvYtMzICBvWcpJRwlZhUSUkGMJ@dpg-cpa93dm3e1ms739m73fg-a.oregon-postgres.render.com/movement_ulas'
+)
+# Normalize to the psycopg2 driver (SQLAlchemy 2.1 defaults postgresql:// to psycopg 3,
+# and no longer accepts the legacy "postgres://" scheme)
+for _scheme in ('postgres://', 'postgresql://'):
+    if _db_url.startswith(_scheme):
+        _db_url = 'postgresql+psycopg2://' + _db_url[len(_scheme):]
+        break
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
