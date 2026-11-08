@@ -128,6 +128,18 @@ with app.app_context():
 
 
 # ---------- Helpers ----------
+def current_voting_window():
+    settings = VotingSettings.query.order_by(desc(VotingSettings.id)).first()
+    if settings is None:
+        return settings, 'Not scheduled'
+    now = datetime.now()
+    if now < settings.voting_start:
+        return settings, 'Scheduled'
+    if now > settings.voting_end:
+        return settings, 'Closed'
+    return settings, 'Open'
+
+
 def generate_pin(length: int = 4) -> str:
     return ''.join(random.choices(string.digits, k=length))
 
@@ -287,11 +299,15 @@ def admin_panel():
             ]
         }
 
+    voting_settings, voting_status = current_voting_window()
     return render_template(
         'admin.html',
         companies=company_data,
         teams=team_data,
-        team_scores=enumerated_scores
+        team_scores=enumerated_scores,
+        voting_settings=voting_settings,
+        voting_status=voting_status,
+        voting_timezone=os.environ.get('TZ') or datetime.now().astimezone().tzname(),
     )
 
 
@@ -489,17 +505,12 @@ def register_user():
 
 @app.route("/")
 def dashboard():
-    settings = VotingSettings.query.order_by(desc(VotingSettings.id)).first()
+    settings, voting_status = current_voting_window()
 
     if not settings:
         flash("Voting settings have not been configured yet.", "warning")
-        return redirect(url_for('not_allowed'))
 
-    voting_start = settings.voting_start
-    voting_end = settings.voting_end
-    current_time = datetime.now()
-
-    if current_time < voting_start or current_time > voting_end:
+    if voting_status != 'Open':
         return redirect(url_for('not_allowed'))
 
     if 'user_id' in session:

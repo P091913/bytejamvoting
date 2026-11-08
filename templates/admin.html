@@ -38,6 +38,21 @@
       <section class="lg:col-span-2 bg-[var(--panel)] p-6 rounded-2xl shadow-lg">
         <h2 class="text-xl font-semibold mb-4">Admin Controls</h2>
 
+        <div class="mb-4 rounded-md border border-white/10 p-3 text-sm">
+          <p>Public voting status <strong>{{ voting_status }}</strong></p>
+          {% if voting_settings %}
+            <p>Opens {{ voting_settings.voting_start.strftime('%b %d, %Y at %I:%M %p') }}</p>
+            <p>Closes {{ voting_settings.voting_end.strftime('%b %d, %Y at %I:%M %p') }}</p>
+            <p class="text-white/70">Time zone {{ voting_timezone }}</p>
+          {% else %}
+            <p>Set a voting window in Settings.</p>
+          {% endif %}
+          <a href="{{ url_for('dashboard') }}" target="_blank" rel="noopener" class="underline">Open public voting page</a>
+        </div>
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+          <p class="mb-3 text-sm" role="{{ 'alert' if category == 'danger' else 'status' }}">{{ message }}</p>
+        {% endfor %}
+
         <!-- Tabs -->
         <nav class="flex gap-2 border-b border-white/6 pb-4 mb-4" role="tablist" aria-label="Admin sections">
           <button id="tab-companies" class="tab px-3 py-2 rounded-md bg-white/6 text-white" onclick="showSection('companies')">Companies</button>
@@ -84,11 +99,11 @@
           <form method="POST" action="/save_voting_settings" class="grid gap-4 mb-6">
             <label class="block text-sm">
               Voting Start
-              <input type="datetime-local" name="voting_start" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
+              <input type="datetime-local" name="voting_start" value="{{ voting_settings.voting_start.strftime('%Y-%m-%dT%H:%M') if voting_settings else '' }}" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
             </label>
             <label class="block text-sm">
               Voting End
-              <input type="datetime-local" name="voting_end" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
+              <input type="datetime-local" name="voting_end" value="{{ voting_settings.voting_end.strftime('%Y-%m-%dT%H:%M') if voting_settings else '' }}" required class="mt-1 w-full p-2 rounded bg-white/5 border border-white/6">
             </label>
             <button type="submit" class="w-full py-2 rounded bg-[var(--primary)] text-[var(--dark)] font-semibold">Save Settings</button>
           </form>
